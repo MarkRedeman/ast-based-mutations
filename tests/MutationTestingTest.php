@@ -25,14 +25,22 @@ class MutationTestingTest extends TestCase
         $ast = $this->generateASTFromCode($code);
         $mutations = $this->generateMutations($ast);
 
-        echo "\n";
+        $results = [];
 
+        // Keep track of the mutated source code by adding the pretty printed
+        // ASTs to the results array
         foreach ($mutations as $mutation) {
-            $this->applyMutation($ast, $mutation, function($code) {
-                $prettyPrinter = new Standard;
-                echo $prettyPrinter->prettyPrint($code) . "\n";
+            $this->applyMutation($ast, $mutation, function($code) use (&$results) {
+                $results[] = (new Standard)->prettyPrint($code);
             });
         }
+
+        $this->assertEquals([
+            'echo 1 / 2 * 3;',
+            'echo 1 / 2 * 3;',
+            'echo 1 * 2 / 3;',
+            'echo 1 * 2 / 3;'
+        ], $results);
     }
 
     private function generateASTFromCode(string $code) : array
@@ -67,12 +75,8 @@ class MutationTestingTest extends TestCase
     {
         $apply = new ApplyMutation($mutation);
 
-        echo "By traversal:\n";
         $this->applyMutationByTraversals($ast, $apply, $action);
-        echo "\n";
-        echo "By copy:\n";
         $this->applyMutationByCopy($ast, $apply, $action);
-        echo "\n";
     }
 
     private function applyMutationByTraversals($ast, ApplyMutation $apply, Closure $action)
