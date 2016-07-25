@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Renamed\Experiments;
 
 use PHPUnit_Framework_TestCase as TestCase;
+use PhpParser\Lexer;
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
-use PhpParser\Node\Expr\BinaryOp;
+use PhpParser\ParserFactory;
+use PhpParser\PrettyPrinter\Standard;
+use Renamed\GenerateMutations;
+use Renamed\Mutation;
+use Renamed\MutationOperator;
+use Renamed\Mutations\Multiplication;
 
 class MutationTestingTest extends TestCase
 {
@@ -23,7 +29,7 @@ class MutationTestingTest extends TestCase
 
         foreach ($mutations as $mutation) {
             $this->applyMutation($ast, $mutation, function($code) {
-                $prettyPrinter = new \PhpParser\PrettyPrinter\Standard;
+                $prettyPrinter = new Standard;
                 echo $prettyPrinter->prettyPrint($code) . "\n";
             });
         }
@@ -31,60 +37,27 @@ class MutationTestingTest extends TestCase
 
     private function generateASTFromCode(string $code) : array
     {
-        // First we will need to find the AST representation of $code
-        $lexer = new \PhpParser\Lexer([
-            'usedAttributes' => ['startline', 'endline']
-        ]);
-
-        $parser = (new \PhpParser\ParserFactory)->create(\PhpParser\ParserFactory::PREFER_PHP7, $lexer);
-
-        $ast = $parser->parse($code);
-        $this->assertInstanceOf(Node::class, $ast[0]);
-
-        return $ast;
+        $lexer = new Lexer(['usedAttributes' => ['startline', 'endline']]);
+        $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7, $lexer);
+        return $parser->parse($code);
     }
 
     private function generateMutations($ast) : array
     {
-        // Next we want to generate mutations, we do this by traversing the AST
+        // Each node in the AST will be passed to the generator, which generates
+        // a set of mutations for the given AST
+        $generator = new GenerateMutations(new Multiplication);
+
+        // Next we pass the generator to a NodeTraverser so that it is called
+        // for each node in the AST
         $traverser = new NodeTraverser;
-
-        // We will need a visitor that tries to generate mutations for each AST node
-        // this visitor will keep track of all of the generated mutations
-        $visitor = new class extends NodeVisitorAbstract {
-                private $mutations = [];
-                private $operators = [];
-
-                public function __construct()
-                {
-                    $this->operators = [new Multiplication];
-                }
-
-                public function leaveNode(Node $node) {
-                    foreach ($this->operators as $operator) {
-                        foreach ($operator->mutate($node) as $mutation) {
-                            // Though we currently keep all mutations in memory (no
-                            // taking advantage of the generators), in the future
-                            // we could instead immediately test the given mutaiton
-                            // by firing an event
-                            $this->mutations[] = new Mutation($node, $mutation);
-                        }
-                    }
-                }
-
-                public function mutations() : array
-                {
-                    return $this->mutations;
-                }
-            };
-
-        $traverser->addVisitor($visitor);
+        $traverser->addVisitor($generator);
         $traverser->traverse($ast);
 
         // Next we can collect the mutations from the visitor
-        $mutations = $visitor->mutations();
+        $mutations = $generator->mutations();
 
-        // AOR creates 26 mutations for each binary operator
+        // The Multiplication operator generates 1 mutation per BinaryOp\Mul node
         $this->assertCount(2, $mutations);
 
         return $mutations;
@@ -138,73 +111,4 @@ class MutationTestingTest extends TestCase
         $traverser->traverse($ast); // revert
     }
 
-}
-
-interface MutationOperator {
-
-    public function mutate(Node $node);
-}
-
-final class Multiplication implements MutationOperator
-{
-    /**
-     * Replace (*) with (/)
-     * @param Node $node
-     */
-    public function mutate(Node $node)
-    {
-        if (! $node instanceof BinaryOp\Mul) {
-            return;
-        }
-
-        yield new BinaryOp\Div($node->left, $node->right, $node->getAttributes());
-    }
-}
-
-final class Mutation
-{
-    /**
-     * @var Node
-     */
-    private $original;
-
-    /**
-     * Ideally a mutation should be a Node, but we also want
-     * to support removing and duplicating nodes
-     * @var Node|array|\PhpParser\NodeTraverser\NodeTraverser::REMOVE_NODE
-     */
-    private $mutation;
-
-    public function __construct(Node $original, $mutation)
-    {
-        $this->original = $original;
-        $this->mutation = $mutation;
-    }
-
-    /**
-     * @return Node reference to the original node
-     */
-    public function original() : Node
-    {
-        return $this->original;
-    }
-
-    /**
-     * @return Node|array|\PhpParser\NodeTraverser\NodeTraverser::REMOVE_NODE
-     */
-    public function mutation() //: Node
-    {
-        return $this->mutation;
-    }
-
-    /**
-     * The filename and linenumber which this mutation acts on can be
-     * used to determine the tests to be run for this mutation.
-     * Though I don' really like this idea because it is only used for
-     * improving performance. Maybe there is a better way to do this..
-     */
-    public function linenumber() : int
-    {
-        throw \Exception;
-    }
 }
