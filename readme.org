@@ -1,0 +1,127 @@
+* AST based mutations
+The following is a proof of concept that generates mutations (see Mutation
+Testing) based on the Abstract Syntax Tree of a given file.
+The idea is to use [[https://github.com/nikic/PHP-Parser][nikic/PHP-Parser]] to generate an AST for a given file. By
+using mutation operators that act on a =Node= of the AST we can create specific
+mutations for that =Node=.
+
+An advantage of using [[https://github.com/nikic/PHP-Parser][nikic/PHP-Parser]] over a custom tokenizer is that the
+mutations will always generate valid PHP.
+
+The process of mutation testing a given AST (in a simple form) is as follows.
+First we generate a set of mutations. Then we apply each mutation one at a time
+to the AST and test the mutated code. After the mutated code has been tested we
+revert the mutation so that we can apply a different mutation.
+
+Note that instead of reverting the mutation we may also clone each generated
+AST, see [[Traverse twice, or clone during traversal][(Traverse twice, or clone during traversal)]].
+
+#+BEGIN_SRC php
+$mutations = generateMutations($ast);
+
+foreach ($mutations as $mutation) {
+    $mutated = mutateAst($ast, $mutation);
+    testMutation($mutated);
+    revertMutation($mutated, $mutation);
+}
+#+END_SRC
+
+** Example
+Suppose we have the following code,
+#+BEGIN_SRC php
+<?php echo 1 * 2 * 3;";
+#+END_SRC
+
+Running the mutation tester with a =ChangeMultiplicationToDivision= operator will
+result in the following mutations
+#+BEGIN_SRC php
+<?php echo 1 / 2 * 3;";
+#+END_SRC
+
+#+BEGIN_SRC php
+<?php echo 1 * 2 / 3;";
+#+END_SRC
+
+The code of the operator is quite simple (though it does require some
+understanding of [[https://github.com/nikic/PHP-Parser][nikic/PHP-Parser]]).
+#+BEGIN_SRC php
+final class ChangeMultiplicationToDivision implements MutationOperator
+{
+    /**
+     * Replace (*) with (/)
+     * @param Node $node
+     */
+    public function mutate(Node $node)
+    {
+        if (! $node instanceof BinaryOp\Mul) {
+            return;
+        }
+
+        yield new BinaryOp\Div($node->left, $node->right, $node->getAttributes());
+    }
+}
+#+END_SRC
+
+** Anatomy of a mutation operator
+A mutation operator implements the =MutationOperator= interface. Note that its
+only input is a =Node= and it does not have a return value, instead each operator
+will =yield= one or more nodes.
+
+#+BEGIN_SRC php
+interface MutationOperator {
+
+    public function mutate(Node $node);
+}
+#+END_SRC
+
+The advantage of yielding a mutation over returning (an array of) mutation(s) is
+that the latter gives us more opportunities to improve performance (see
+[[Synchronous vs asynchronous mutation testing]]).
+
+* Issues / notes
+** Synchronous vs asynchronous mutation testing
+In the current implementation the visitor that generates the mutants collects
+all of the possible mutations of a given AST.
+To decrease memory usage we may instead apply and test at the same time.
+
+** Performance when applying a mutation
+*** Traverse twice, or clone during traversal
+When applying a mutation on an ASt we have two options. We can traverse the AST
+twice, where in the first time we apply the mutation and in the second we
+reverse the mutation.
+
+This requires the =ApplyMutation= function to communicate that an mutation has
+been applied (See offline vs online mutation testing for a similar discussion).
+
+Another option would be to clone each node during traversal. This will probably
+be less efficient since it requires copying a whole AST.
+
+*** Stop traversing after mutation has been applied
+Once a mutation has been applied we can stop traversing the AST.
+
+A simple fix could be to add a second visitor that is visited after the first
+one and returns =NodeTraverserInterface::DONT_TRAVERSE_CHILDREN=.
+
+An even simpler fix could be returning
+=NodeTraverserInterface::DONT_TRAVERSE_CHILDREN= in =enterNode= of each mutation,
+however this will require each mutation to extend a base class.
+
+I don't like extending a mutation since that makes writing a mutation somewhat
+more complex.
+
+In the end I would prefer to combine the traverser and visitor.
+
+** Combine traverser and visitors
+Currently we require both a AST traverser and an NodeVisitor for both generating
+and applying a mutation.
+Since in both cases we only need 1 visitor it does not make much sense to have a
+traverser that can have multiple visitors.
+Moreover applying and generating mutations could probably use different
+traversers since applying won't have to traverse the whole AST.
+
+** Higher order mutants
+Higher order mutants are mutants that have been created by more than one mutation.
+It would be nice to have support for higher order mutations, and I don't think
+it will require a lot of effort to implement this. But higher order mutations
+will result in a lot more mutations, making the overall process slower.
+I should probably read some research papers about HOMs.

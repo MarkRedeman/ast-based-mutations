@@ -1,0 +1,31 @@
+{
+    "name": "renamed/ast-based-mutations",
+    "description": "A proof of concept creating mutations based on a abstract syntax tree",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mark Redeman",
+            "email": "markredeman@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.0",
+        "nikic/php-parser": "^2.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Renamed\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Renamed\\Tests\\": "tests"
+        }
+    },
+    "bin": [
+        "phpunit"
+    ]
+}
