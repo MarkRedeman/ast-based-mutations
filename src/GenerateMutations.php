@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Renamed;
 
 use PhpParser\Node;
+use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 use Renamed\MutationOperator;
 use Renamed\Mutation;
@@ -19,6 +20,30 @@ final class GenerateMutations extends NodeVisitorAbstract
         $this->operators = $operators;
     }
 
+    /**
+     * Generate a set of mutations for the given AST
+     * @param array $ast
+     * @param array Mutation[]
+     */
+    public function generate(array $ast) : array
+    {
+        // Next we pass the generator to a NodeTraverser so that it is called
+        // for each node in the AST
+        $traverser = new NodeTraverser;
+        $traverser->addVisitor($this);
+        $traverser->traverse($ast);
+
+        // Get rid of circular dependency
+        $traverser->removeVisitor($this);
+
+        // Next we can collect the mutations from the visitor
+        return $this->mutations;
+    }
+
+    /**
+     * Generate a mutation when leaving a node in the AST
+     * @param Node $node AST node
+     */
     public function leaveNode(Node $node) {
         foreach ($this->operators as $operator) {
             foreach ($operator->mutate($node) as $mutation) {
@@ -29,10 +54,5 @@ final class GenerateMutations extends NodeVisitorAbstract
                 $this->mutations[] = new Mutation($node, $mutation);
             }
         }
-    }
-
-    public function mutations() : array
-    {
-        return $this->mutations;
     }
 };

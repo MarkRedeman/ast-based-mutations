@@ -7,13 +7,11 @@ namespace Renamed\Tests;
 use Closure;
 use PHPUnit_Framework_TestCase as TestCase;
 use PhpParser\Lexer;
-use PhpParser\NodeTraverser;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
 use Renamed\ApplyMutation;
 use Renamed\GenerateMutations;
 use Renamed\Mutation;
-use Renamed\MutationOperator;
 use Renamed\Mutations\Multiplication;
 
 class MutationTestingTest extends TestCase
@@ -25,12 +23,13 @@ class MutationTestingTest extends TestCase
         $ast = $this->generateASTFromCode($code);
         $mutations = $this->generateMutations($ast);
 
-        $results = [];
-
         // Keep track of the mutated source code by adding the pretty printed
         // ASTs to the results array
+        $results = [];
+        $apply = new ApplyMutation($ast);
+
         foreach ($mutations as $mutation) {
-            $this->applyMutation($ast, $mutation, function($mutation, $code) use (&$results) {
+            $apply->apply($mutation, function ($mutation, $code) use (&$results) {
                 $results[] = (new Standard)->prettyPrint($code);
             });
         }
@@ -53,25 +52,11 @@ class MutationTestingTest extends TestCase
         // Each node in the AST will be passed to the generator, which generates
         // a set of mutations for the given AST
         $generator = new GenerateMutations(new Multiplication);
-
-        // Next we pass the generator to a NodeTraverser so that it is called
-        // for each node in the AST
-        $traverser = new NodeTraverser;
-        $traverser->addVisitor($generator);
-        $traverser->traverse($ast);
-
-        // Next we can collect the mutations from the visitor
-        $mutations = $generator->mutations();
+        $mutations = $generator->generate($ast);
 
         // The Multiplication operator generates 1 mutation per BinaryOp\Mul node
         $this->assertCount(2, $mutations);
 
         return $mutations;
-    }
-
-    private function applyMutation($ast, Mutation $mutation, Closure $action)
-    {
-        $apply = new ApplyMutation($ast);
-        $apply->apply($mutation, $action);
     }
 }
