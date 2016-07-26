@@ -47,9 +47,14 @@ abstract class MutationOperatorTest extends TestCase
 
         $original = $this->asAst($this->code);
 
-        $mutation = $operator->mutate($original)->current();
+        $mutations = [];
+        foreach ($operator->mutate($original) as $mutation) {
+            $mutations[] = $mutation;
+        }
 
-        $this->assertEquals($expected, $this->asCode($mutation));
+        $this->assertContains($expected, array_map(function($mutation) {
+            return $this->asCode($mutation);
+        }, $mutations));
     }
 
     private function asAst($code)
