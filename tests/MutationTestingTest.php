@@ -16,28 +16,42 @@ use Renamed\Mutations\Multiplication;
 
 class MutationTestingTest extends TestCase
 {
-    /** @test */
+    /**
+     * Stores the applied mutations
+     * @var array
+     */
+    private $results = [];
+
+    /**
+     * This test shows how the process of generating, applying and storing
+     * mutations works.
+     * @test
+     */
     function it_creates_mutations_based_on_an_abstract_syntax_tree()
     {
-        $code = "<?php echo 1 * 2 * 3;";
-        $ast = $this->generateASTFromCode($code);
-        $mutations = $this->generateMutations($ast);
+        $source = "<?php echo 1 * 2 * 3;";
+        $ast = $this->generateASTFromCode($source);
 
-        // Keep track of the mutated source code by adding the pretty printed
-        // ASTs to the results array
-        $results = [];
-        $apply = new ApplyMutation($ast);
+        // Setup the mutation generator, which will apply a mutation once it's
+        // been generated
+        // The ApplyMutation object will apply the mutation and then call the
+        // storeAppliedMutations closure so that we can check that the mutations
+        // have successfully been applied
+        $generator = new GenerateMutations(
+            $this->applyMutationAfterGeneration(
+                new ApplyMutation($ast),
+                $this->storeAppliedMutations()
+            ),
+            new Multiplication
+        );
 
-        foreach ($mutations as $mutation) {
-            $apply->apply($mutation, function ($mutation, $ast) use (&$results) {
-                $results[] = (new Standard)->prettyPrint($ast);
-            });
-        }
+        // Generate and store the applied mutations
+        $generator->generate($ast);
 
         $this->assertEquals([
             'echo 1 / 2 * 3;',
             'echo 1 * 2 / 3;'
-        ], $results);
+        ], $this->results);
     }
 
     private function generateASTFromCode(string $code) : array
@@ -47,22 +61,41 @@ class MutationTestingTest extends TestCase
         return $parser->parse($code);
     }
 
-    private function generateMutations(array $ast) : array
+    // The following are helper functions that return closures
+
+    /**
+     * Will apply a given mutation and call the $afterApplying callback once
+     * the mutation has been applied.
+     * @param ApplyMutation $apply
+     * @param Closure $afterApplying
+     */
+    private function applyMutationAfterGeneration(
+        ApplyMutation $apply,
+        Closure $afterApplying
+    ) : Closure {
+        return function (Mutation $mutation) use ($apply, $afterApplying) {
+            $apply->apply($mutation, $afterApplying);
+        };
+    }
+
+    /**
+     * Saves the pretty printed mutated AST into the $results property
+     */
+    private function storeAppliedMutations() : Closure
     {
-        // Each node in the AST will be passed to the generator, which generates
-        // a set of mutations for the given AST
-        $mutations = [];
-        $generator = new GenerateMutations(
-            function (Mutation $mutation) use (&$mutations) {
-                $mutations[] = $mutation;
-            },
-            new Multiplication
-        );
-        $generator->generate($ast);
+        return function ($mutation, $ast) {
+            $this->results[] = (new Standard)->prettyPrint($ast);
+        };
+    }
 
-        // The Multiplication operator generates 1 mutation per BinaryOp\Mul node
-        $this->assertCount(2, $mutations);
-
-        return $mutations;
+    /**
+     * When called with a mutation and AST, it will print
+     * the prettyPrinted code
+     */
+    private function printAppliedMutations() : Closure
+    {
+        return function ($mutation, $ast) {
+            echo (new Standard)->prettyPrint($ast);
+        };
     }
 }
