@@ -27,7 +27,8 @@ class GenerateMutationsTest extends TestCase
     /** @test */
     function it_cant_create_mutatins_if_no_mutation_operators_have_been_applied()
     {
-        $generator = new GenerateMutations($this->afterGeneration($mutations = []));
+        $mutations = [];
+        $generator = new GenerateMutations($this->afterGeneration($mutations));
         $generator->generate($this->ast);
 
         $this->assertEmpty($mutations);
@@ -44,7 +45,8 @@ class GenerateMutationsTest extends TestCase
                 }
             };
 
-        $generator = new GenerateMutations($this->afterGeneration($mutations = []));
+        $mutations = [];
+        $generator = new GenerateMutations($this->afterGeneration($mutations));
         $generator->generate($this->ast);
 
         // Check if the types are correct
