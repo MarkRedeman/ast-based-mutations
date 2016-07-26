@@ -18,13 +18,22 @@ use PHPUnit_Framework_TestCase as TestCase;
  * options to check that multiple nodes can be mutated
  *
  * For this we will need well written ApplyMutation and
- * GenerateMutations instances
+ * Generate Mutations instances
  */
 abstract class MutationOperatorTest extends TestCase
 {
     private $code;
 
     abstract protected function operator() : MutationOperator;
+
+    protected function doesNotMutate(string $code)
+    {
+        $operator = $this->operator();
+        $original = $this->asAst($code);
+        $mutation = $operator->mutate($original);
+
+        $this->assertNull(($mutation->current()));
+    }
 
     protected function mutates(string $code)
     {

@@ -42,4 +42,11 @@ class DateTimeFromFormatTest extends TestCase
         $this->mutates('new DateTime($date, $timezone);')
             ->to('DateTime::createFromFormat(DateTime::ISO8601, $date, $timezone);');
     }
+
+    /** @test */
+    function it_only_mutates_new_datetime_statements()
+    {
+        $this->doesNotMutate('new StdClass;');
+        $this->doesNotMutate('$hello = "world";');
+    }
 }

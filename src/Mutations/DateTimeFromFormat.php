@@ -27,6 +27,10 @@ final class DateTimeFromFormat implements MutationOperator
             return;
         }
 
+        if ($node->class->toString() !== "DateTime") {
+            return;
+        }
+
         yield $this->createFromFormat("ISO8601", $node->args);
     }
 
