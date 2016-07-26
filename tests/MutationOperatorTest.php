@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Renamed\Tests;
 
-use Renamed\MutationOperator;
+use Generator;
 use PhpParser\Lexer;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
-use PhpParser\Node\Expr\BinaryOp;
-use PhpParser\Node\Scalar\LNumber;
+use PhpParser\Node;
 use PHPUnit_Framework_TestCase as TestCase;
+use Renamed\MutationOperator;
 
 /**
  * This helper test class may be used to easily test a mutation operator
@@ -25,6 +25,18 @@ abstract class MutationOperatorTest extends TestCase
     private $code;
 
     abstract protected function operator() : MutationOperator;
+
+    /** @test */
+    function it_returns_a_generator()
+    {
+        $node = $this->prophesize(Node::class);
+        $operator = $this->operator();
+
+        $this->assertInstanceOf(
+            Generator::class,
+            $operator->mutate($node->reveal())
+        );
+    }
 
     protected function doesNotMutate(string $code)
     {
