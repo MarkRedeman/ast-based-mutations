@@ -22,8 +22,8 @@ class ApplyMutationTest extends TestCase
         $mutation = new Mutation($original, $target);
 
         $apply = new ApplyMutation($ast);
-        $apply->apply($mutation, function(Mutation $mutation, $ast) use (&$applied, $target) {
-            // Check that the AsT has successfully been mutated
+        $apply->apply($mutation, function (Mutation $mutation, $ast) use (&$applied, $target) {
+            // Check that the AST has successfully been mutated
             $this->assertEquals([$target], $ast);
             $applied = true;
         });

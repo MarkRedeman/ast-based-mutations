@@ -44,7 +44,7 @@ final class ApplyMutation extends NodeVisitorAbstract
     }
 
     /**
-     * Returns an anonymous class instance taht acts as a Node visitor
+     * Returns an anonymous class instance that acts as a Node visitor
      * this visitor will mutate the ast based on the given mutation.
      */
     private function visitor(Mutation $mutation) : NodeVisitor

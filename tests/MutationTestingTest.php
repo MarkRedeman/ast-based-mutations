@@ -29,8 +29,8 @@ class MutationTestingTest extends TestCase
         $apply = new ApplyMutation($ast);
 
         foreach ($mutations as $mutation) {
-            $apply->apply($mutation, function ($mutation, $code) use (&$results) {
-                $results[] = (new Standard)->prettyPrint($code);
+            $apply->apply($mutation, function ($mutation, $ast) use (&$results) {
+                $results[] = (new Standard)->prettyPrint($ast);
             });
         }
 
@@ -51,8 +51,14 @@ class MutationTestingTest extends TestCase
     {
         // Each node in the AST will be passed to the generator, which generates
         // a set of mutations for the given AST
-        $generator = new GenerateMutations(new Multiplication);
-        $mutations = $generator->generate($ast);
+        $mutations = [];
+        $generator = new GenerateMutations(
+            function (Mutation $mutation) use (&$mutations) {
+                $mutations[] = $mutation;
+            },
+            new Multiplication
+        );
+        $generator->generate($ast);
 
         // The Multiplication operator generates 1 mutation per BinaryOp\Mul node
         $this->assertCount(2, $mutations);

@@ -27,9 +27,10 @@ class GenerateMutationsTest extends TestCase
     /** @test */
     function it_cant_create_mutatins_if_no_mutation_operators_have_been_applied()
     {
-        $generator = new GenerateMutations;
+        $generator = new GenerateMutations($this->afterGeneration($mutations = []));
+        $generator->generate($this->ast);
 
-        $this->assertEmpty($generator->generate($this->ast));
+        $this->assertEmpty($mutations);
     }
 
     /** @test */
@@ -43,8 +44,8 @@ class GenerateMutationsTest extends TestCase
                 }
             };
 
-        $generator = new GenerateMutations($operator);
-        $mutations = $generator->generate($this->ast);
+        $generator = new GenerateMutations($this->afterGeneration($mutations = []));
+        $generator->generate($this->ast);
 
         // Check if the types are correct
         $this->assertContainsOnlyInstancesOf(Mutation::class, $mutations);
@@ -60,5 +61,18 @@ class GenerateMutationsTest extends TestCase
         $lexer = new Lexer(['usedAttributes' => ['startline', 'endline']]);
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7, $lexer);
         return $parser->parse($code);
+    }
+
+    /**
+     * Returns a function that will be called after a mutation has been
+     * generated.
+     * We pass an array of mutations by reference so that we can find
+     * the mutations that have been generated.
+     */
+    private function afterGeneration(&$mutaitons)
+    {
+        return function (Mutation $mutation) use (&$mutations) {
+            $mutations[] = $mutation;
+        };
     }
 }
