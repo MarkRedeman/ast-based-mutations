@@ -4,26 +4,26 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "f29b455da43641040e886b7b9ecc5358",
-    "content-hash": "877a53c7ec334225e03e2ade3a03ac0f",
+    "hash": "f7afa4893d54bc13a205783cb8a2ab7a",
+    "content-hash": "9647fbae989482940b70debd920a8d08",
     "packages": [
         {
             "name": "nikic/php-parser",
-            "version": "v2.1.0",
+            "version": "v3.0.0alpha1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "47b254ea51f1d6d5dc04b9b299e88346bf2369e3"
+                "reference": "21b18eb2945aa4b887b98a11f0ef7d5fe24527fc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/47b254ea51f1d6d5dc04b9b299e88346bf2369e3",
-                "reference": "47b254ea51f1d6d5dc04b9b299e88346bf2369e3",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/21b18eb2945aa4b887b98a11f0ef7d5fe24527fc",
+                "reference": "21b18eb2945aa4b887b98a11f0ef7d5fe24527fc",
                 "shasum": ""
             },
             "require": {
                 "ext-tokenizer": "*",
-                "php": ">=5.4"
+                "php": ">=5.5"
             },
             "require-dev": {
                 "phpunit/phpunit": "~4.0"
@@ -34,7 +34,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.1-dev"
+                    "dev-master": "3.0-dev"
                 }
             },
             "autoload": {
@@ -56,7 +56,7 @@
                 "parser",
                 "php"
             ],
-            "time": "2016-04-19 13:41:41"
+            "time": "2016-07-25 13:16:35"
         }
     ],
     "packages-dev": [
@@ -1912,6 +1912,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
+        "nikic/php-parser": 15,
         "humbug/humbug": 20
     },
     "prefer-stable": false,
