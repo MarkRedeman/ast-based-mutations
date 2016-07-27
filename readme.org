@@ -8,22 +8,47 @@ mutations for that =Node=.
 An advantage of using [[https://github.com/nikic/PHP-Parser][nikic/PHP-Parser]] over a custom tokenizer is that the
 mutations will always generate valid PHP.
 
-The process of mutation testing a given AST (in a simple form) is as follows.
-First we generate a set of mutations. Then we apply each mutation one at a time
-to the AST and test the mutated code. After the mutated code has been tested we
-revert the mutation so that we can apply a different mutation.
+Creating mutations for a given source code can be done in 3 steps,
 
-Note that instead of reverting the mutation we may also clone each generated
-AST, see [[Traverse twice, or clone during traversal][(Traverse twice, or clone during traversal)]].
+1. Convert the source code to an AST
+2. Generate mutations based on mutation operators
+3. Apply the mutations one at a time and take action (e.g. store the mutated AST
+   or run tests on the mutated AST)
+
+The following example illustrates these steps,
 
 #+BEGIN_SRC php
-$mutations = generateMutations($ast);
+use PhpParser\Lexer;
+use PhpParser\ParserFactory;
+use PhpParser\PrettyPrinter\Standard;
+use Renamed\ApplyMutation;
+use Renamed\GenerateMutations;
+use Renamed\Mutation;
+use Renamed\MutationOperator;
+use Renamed\Mutations;
 
-foreach ($mutations as $mutation) {
-    $mutated = mutateAst($ast, $mutation);
-    testMutation($mutated);
-    revertMutation($mutated, $mutation);
-}
+// The orginal source code for which we want to create mutations
+$source = "<?php echo 1 * 2 * 3;";
+
+// Setup a parser to generate the AST
+$parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7, new Lexer);
+
+$ast = $paser->parse($source);
+
+$applyMutation = new ApplyMutation($ast);
+
+$generator = new GenerateMutations(
+    function(Mutation $mutation) use ($applyMutation) {
+        $applyMutation->apply($mutation, function($mutation, $ast) {
+            echo (new Standard)->prettyPrint($ast);
+        })
+    },
+    new Mutations\Multiplication,
+    new Mutations\DateTimeFromFormat // ... you can add as many operators as you want
+);
+
+// Generate and store the applied mutations
+$generator->generate($ast);
 #+END_SRC
 
 ** Example
@@ -77,12 +102,18 @@ interface MutationOperator {
 The advantage of yielding a mutation over returning (an array of) mutation(s) is
 that the latter gives us more opportunities to improve performance (see
 [[Synchronous vs asynchronous mutation testing]]).
+If you want to test your mutation operator be sure to extend the abstract
+=Renamed\Tests\MutationOperatorTest= testcase.
 
 * Issues / notes
 ** Synchronous vs asynchronous mutation testing
-In the current implementation the visitor that generates the mutants collects
-all of the possible mutations of a given AST.
-To decrease memory usage we may instead apply and test at the same time.
+The current implementation of =GenerateMutations= uses a =Closure= that is
+called after each mutation is generated. It is up to the user to decide what he
+or she wants to do with it.
+In general a =Closure= is given that calls the =apply= method on an =ApplyMutation=
+instance. Another approach would be to store the mutations and apply the
+mutations after all mutations have been generated. The later approach will
+probably be more memory intensive.
 
 ** Performance when applying a mutation
 *** Traverse twice, or clone during traversal
@@ -90,13 +121,11 @@ When applying a mutation on an ASt we have two options. We can traverse the AST
 twice, where in the first time we apply the mutation and in the second we
 reverse the mutation.
 
-This requires the =ApplyMutation= function to communicate that an mutation has
-been applied (See offline vs online mutation testing for a similar discussion).
-
 Another option would be to clone each node during traversal. This will probably
 be less efficient since it requires copying a whole AST.
 
-*** Stop traversing after mutation has been applied
+*** ✔ DONE Stop traversing after mutation has been applied
+    CLOSED: [2016-07-27 wo 11:18]
 Once a mutation has been applied we can stop traversing the AST.
 
 A simple fix could be to add a second visitor that is visited after the first
