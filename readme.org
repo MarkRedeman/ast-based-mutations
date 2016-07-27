@@ -51,6 +51,24 @@ $generator = new GenerateMutations(
 $generator->generate($ast);
 #+END_SRC
 
+You may also use the =Renamed\MutateSourceCode= class to create mutations.
+#+BEGIN_SRC php
+use PhpParser\PrettyPrinter\Standard;
+use Renamed\MutateSourceCode;
+use Renamed\Mutations;
+
+$source = file_get_contents("SomeFile.php");
+$mutate = new MutateSourceCode(
+    new Mutations\Multiplication
+);
+
+// After a mutation has been applied, echo the pretty printed code
+$mutate->mutate($source, function ($mutation, $ast) {
+    echo (new Standard)->prettyPrint($ast);
+});
+#+END_SRC
+
+
 ** Example
 Suppose we have the following code,
 #+BEGIN_SRC php
