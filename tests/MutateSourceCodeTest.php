@@ -39,6 +39,22 @@ class MutationSourceCodeTest extends TestCase
         ], $this->results);
     }
 
+    /** @test */
+    function it_should_not_swap_actual_code_with_mutations()
+    {
+        $source = "<?php echo 2 / 2 + 2 * 2;";
+
+        $mutate = new MutateSourceCode(
+            new Multiplication
+        );
+
+        $mutate->mutate($source, $this->storeAppliedMutations());
+
+        $this->assertEquals([
+            'echo 2 / 2 + 2 / 2;',
+        ], $this->results);
+    }
+
     /**
      * Saves the pretty printed mutated AST into the $results property
      */
