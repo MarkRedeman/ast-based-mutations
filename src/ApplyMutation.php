@@ -64,12 +64,12 @@ final class ApplyMutation extends NodeVisitorAbstract
             public function leaveNode(Node $node)
             {
                 // If we visit the original node, then replace it with the mutated node
-                if ($node == $this->mutation->original()) {
+                if ($node === $this->mutation->original()) {
                     return $this->mutation->mutation();
                 }
 
                 // If we visit the mutated node, then replace it with the original node
-                if ($node == $this->mutation->mutation()) {
+                if ($node === $this->mutation->mutation()) {
                     return $this->mutation->original();
                 }
             }
@@ -80,7 +80,7 @@ final class ApplyMutation extends NodeVisitorAbstract
              */
             public function enterNode(Node $node)
             {
-                if ($node == $this->mutation->original() || $node == $this->mutation->mutation()) {
+                if ($node === $this->mutation->original() || $node === $this->mutation->mutation()) {
                     return NodeTraverserInterface::DONT_TRAVERSE_CHILDREN;
                 }
             }
