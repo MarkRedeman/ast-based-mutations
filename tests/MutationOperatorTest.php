@@ -42,9 +42,9 @@ abstract class MutationOperatorTest extends TestCase
     {
         $operator = $this->operator();
         $original = $this->asAst($code);
-        $mutation = $operator->mutate($original);
+        $mutation = $operator->mutate($original[0]);
 
-        $this->assertNull(($mutation->current()));
+        $this->assertNull($mutation->current());
     }
 
     protected function mutates(string $code)
@@ -55,18 +55,23 @@ abstract class MutationOperatorTest extends TestCase
 
     protected function to(string $expected)
     {
+        $expected = $this->asCode($this->asAst($expected));
         $operator = $this->operator();
 
         $original = $this->asAst($this->code);
 
         $mutations = [];
-        foreach ($operator->mutate($original) as $mutation) {
+        foreach ($operator->mutate($original[0]) as $mutation) {
             $mutations[] = $mutation;
         }
 
-        $this->assertContains($expected, array_map(function($mutation) {
+        $this->assertNotEmpty($mutations, "Operator did not produce any mutaitons");
+
+        $pretty = array_map(function ($mutation) {
             return $this->asCode($mutation);
-        }, $mutations));
+        }, $mutations);
+
+        $this->assertContains($expected, $pretty, "`{$expected}` is not one of the following mutations: \n" . implode("\n", $pretty));
     }
 
     private function asAst($code)
@@ -74,11 +79,16 @@ abstract class MutationOperatorTest extends TestCase
         $lexer = new Lexer(['usedAttributes' => []]);
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7, $lexer);
         $ast = $parser->parse("<?php " . $code);
-        return $ast[0];
+        return $ast;
     }
 
     private function asCode($ast)
     {
-        return (new Standard)->prettyPrint([$ast]);
+        $printer = new Standard;
+
+        if (is_array($ast)) {
+            return $printer->prettyPrint($ast);
+        }
+        return $printer->prettyPrint([$ast]);
     }
 }
