@@ -27,6 +27,11 @@ final class DateTimeFromFormat implements MutationOperator
             return;
         }
 
+        // check that we are a class name
+        if (! $node->class instanceof Name) {
+            return;
+        }
+
         if ($node->class->toString() !== "DateTime") {
             return;
         }

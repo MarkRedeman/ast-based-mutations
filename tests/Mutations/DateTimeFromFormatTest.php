@@ -49,4 +49,16 @@ class DateTimeFromFormatTest extends TestCase
         $this->doesNotMutate('new StdClass;');
         $this->doesNotMutate('$hello = "world";');
     }
+
+    /** @test */
+    function it_does_not_mutate_expressions()
+    {
+        $this->doesNotMutate('new func();');
+    }
+
+    /** @test */
+    function it_does_not_mutate_instantiations_of_anonymous_classes()
+    {
+        $this->doesNotMutate('new class {};');
+    }
 }
