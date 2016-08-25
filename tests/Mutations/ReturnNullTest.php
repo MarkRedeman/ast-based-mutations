@@ -30,4 +30,11 @@ class ReturnNullTest extends TestCase
         $this->doesNotMutate('new StdClass;');
         $this->doesNotMutate('$hello = "world";');
     }
+
+    /** @test */
+    function it_does_not_mutate_a_return_statement_that_explicitely_returns_null()
+    {
+        $this->doesNotMutate('return;');
+    }
+
 }

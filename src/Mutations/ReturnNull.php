@@ -19,6 +19,10 @@ final class ReturnNull implements MutationOperator
             return;
         }
 
+        if ($node->expr === null) {
+            return;
+        }
+
         yield [$node->expr, new Node\Stmt\Return_(null, $node->getAttributes())];
     }
 }
