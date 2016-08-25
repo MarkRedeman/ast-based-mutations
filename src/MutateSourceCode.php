@@ -50,7 +50,7 @@ final class MutateSourceCode
      */
     private function generateASTFromCode(string $source) : array
     {
-        $lexer = new Lexer(['usedAttributes' => ['startline', 'endline']]);
+        $lexer = new Lexer(['usedAttributes' => ['startLine', 'endLine']]);
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7, $lexer);
         return $parser->parse($source);
     }
