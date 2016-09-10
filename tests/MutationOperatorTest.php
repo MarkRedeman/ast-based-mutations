@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Renamed\Tests;
 
+use Closure;
 use Generator;
+use PHPUnit_Framework_TestCase as TestCase;
 use PhpParser\Lexer;
+use PhpParser\Node;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
-use PhpParser\Node;
-use PHPUnit_Framework_TestCase as TestCase;
+use Renamed\MutateSourceCode;
 use Renamed\MutationOperator;
 
 /**
@@ -22,7 +24,15 @@ use Renamed\MutationOperator;
  */
 abstract class MutationOperatorTest extends TestCase
 {
+    /**
+     * @var string used to provide fluent syntax
+     */
     private $code;
+
+    /**
+     * @var bool used to check if an expected mutation was found
+     */
+    private $found = false;
 
     abstract protected function operator() : MutationOperator;
 
@@ -38,14 +48,10 @@ abstract class MutationOperatorTest extends TestCase
         );
     }
 
-    protected function doesNotMutate(string $code)
-    {
-        $operator = $this->operator();
-        $original = $this->asAst($code);
-        $mutation = $operator->mutate($original[0]);
-
-        $this->assertNull($mutation->current());
-    }
+    // The following are helper functions that make it easier to test the output
+    // of a given mutation operator
+    // Example:
+    // $this->mutates('3 + 3;')->to('3 - 3;');
 
     protected function mutates(string $code)
     {
@@ -55,28 +61,49 @@ abstract class MutationOperatorTest extends TestCase
 
     protected function to(string $expected)
     {
-        $expected = $this->asCode($this->asAst($expected));
-        $operator = $this->operator();
+        $source = '<?php ' . $this->code;
+        $mutate = new MutateSourceCode($this->operator());
+        $mutate->mutate(
+            $source,
+            $this->findMutation($this->asAst($expected))
+        );
 
-        $original = $this->asAst($this->code);
+        $this->assertTrue($this->found, "The operator did not produce the expected mutation");
+    }
 
-        $mutations = [];
-        foreach ($operator->mutate($original[0]) as $mutation) {
-            $mutations[] = $mutation;
-        }
+    protected function doesNotMutate(string $code)
+    {
+        $source = '<?php ' . $code;
+        $mutate = new MutateSourceCode($this->operator());
+        $mutate->mutate(
+            $source,
+            function () {
+                $this->assertFalse(true, "Did not expect to find a mutation");
+            }
+        );
+    }
 
-        $this->assertNotEmpty($mutations, "Operator did not produce any mutaitons");
+    /**
+     * Saves the pretty printed mutated AST into the $results property
+     */
+    private function findMutation(array $expected) : Closure
+    {
+        $this->found = false;
 
-        $pretty = array_map(function ($mutation) {
-            return $this->asCode($mutation);
-        }, $mutations);
-
-        $this->assertContains($expected, $pretty, "`{$expected}` is not one of the following mutations: \n" . implode("\n", $pretty));
+        return function ($mutation, $ast) use ($expected) {
+            // First we will revert both the expected and the generated AST
+            // to text. This is because when we would check the equality
+            // of $ast and $expected the test will fail when the attributes
+            // (startLine, endLine etc) of a node have been changed.
+            if ($this->asCode($ast) == $this->asCode($expected)) {
+                $this->found = true;
+            }
+        };
     }
 
     private function asAst($code)
     {
-        $lexer = new Lexer(['usedAttributes' => []]);
+        $lexer = new Lexer(['usedAttributes' => ['startLine', 'endLine']]);
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7, $lexer);
         $ast = $parser->parse("<?php " . $code);
         return $ast;
