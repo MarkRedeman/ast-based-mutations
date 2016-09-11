@@ -25,5 +25,6 @@ class FalseValueTest extends TestCase
     function it_does_not_mutate_nodes_are_not_true()
     {
         $this->doesNotMutate('$hello = "world";');
+        $this->doesNotMutate('false;');
     }
 }
