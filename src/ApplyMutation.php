@@ -81,7 +81,7 @@ final class ApplyMutation extends NodeVisitorAbstract
             public function enterNode(Node $node)
             {
                 if ($node === $this->mutation->original() || $node === $this->mutation->mutation()) {
-                    return NodeTraverserInterface::DONT_TRAVERSE_CHILDREN;
+                    return NodeTraverser::DONT_TRAVERSE_CHILDREN;
                 }
             }
         };
